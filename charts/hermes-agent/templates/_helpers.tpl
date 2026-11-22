@@ -339,6 +339,7 @@ fi
 {{- if $p.secretName }}
 {{ $cli }} config set secrets.command.command "cd /etc/hermes-secrets/{{ $name }} && grep -H '' * | sed 's/:/=/'"
 {{ $cli }} config set secrets.command.override_existing true
+{{ $cli }} config set secrets.command.enabled true
 {{- end }}
 {{- end }}
 exit 0
