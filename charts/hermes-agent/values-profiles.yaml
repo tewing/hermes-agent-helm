@@ -37,6 +37,8 @@ profiles:
     repo: github.com/example/hermes-profile-voice
     ref: v0.1.0
     secretName: voice-env
+    plugins:
+      - name: advanced-delegation
   researcher:
     secretName: researcher-env
     config:

@@ -327,10 +327,18 @@ if [ "{{ $.Values.bootstrap.overwrite }}" = "true" ] || [ -n "$created" ] || [ !
 fi
 {{- end }}
 {{- end }}
+{{- $pluginsDir := ternary "plugins" (printf "profiles/%s/plugins" $name) (eq $name "default") }}
+{{- range $p.plugins }}
+{{- $src := .source | default .name }}
+if [ -d "{{ $pluginsDir }}/{{ .name }}" ]; then
+  {{ $cli }} plugins enable {{ .name }} || echo "WARN: could not enable plugin {{ .name }} for profile {{ $name }}"
+else
+  {{ $cli }} plugins install {{ $src | quote }}{{ with .ref }} --ref {{ . }}{{ end }} --yes-deps --enable || echo "WARN: could not install plugin {{ .name }} for profile {{ $name }}"
+fi
+{{- end }}
 {{- if $p.secretName }}
-{{ $cli }} config set secrets.command.enabled true
-{{ $cli }} config set secrets.command.override_existing true
 {{ $cli }} config set secrets.command.command "cd /etc/hermes-secrets/{{ $name }} && grep -H '' * | sed 's/:/=/'"
+{{ $cli }} config set secrets.command.override_existing true
 {{- end }}
 {{- end }}
 exit 0
@@ -538,6 +546,11 @@ spec:
         # Scratch space on the data volume: the root filesystem may be read-only.
         - name: TMPDIR
           value: {{ printf "%s/cache/profile-tmp" .Values.persistence.mountPath | quote }}
+      # A GITHUB_TOKEN/GH_TOKEN in the env Secret lets plugin installs clone private repos.
+      envFrom:
+        - secretRef:
+            name: {{ include "hermes-agent.envSecretName" . }}
+            optional: true
       volumeMounts:
         - name: data
           mountPath: {{ .Values.persistence.mountPath }}

@@ -130,7 +130,20 @@
           "type": ["object", "null"],
           "additionalProperties": false,
           "properties": {
-            "secretName": { "type": "string", "minLength": 1 }
+            "secretName": { "type": "string", "minLength": 1 },
+            "plugins": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+                  "source": { "type": "string", "minLength": 1 },
+                  "ref": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+                }
+              }
+            }
           }
         }
       },
@@ -141,6 +154,19 @@
           "repo": { "type": "string", "minLength": 1 },
           "ref": { "type": "string", "minLength": 1 },
           "secretName": { "type": "string", "minLength": 1 },
+          "plugins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+              "source": { "type": "string", "minLength": 1 },
+              "ref": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+            }
+        }
+          },
           "config": {
             "type": "object",
             "description": "Partial config.yaml for a profile without `repo` (a distribution owns its own config.yaml).",
