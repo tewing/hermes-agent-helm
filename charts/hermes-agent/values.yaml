@@ -173,8 +173,8 @@ bootstrap:
 #               `source` is a catalog name, owner/repo or Git URL (default:
 #               `name`); `ref` pins a 40-character commit SHA (default: the
 #               catalog's pin). Private repos need a GITHUB_TOKEN in the env
-#               Secret (`env`/`externalSecret`), which this init container
-#               reads. Removing an entry does not uninstall the plugin. Plugins
+#               Secret (`env`/`externalSecret`) or in the profile's own
+#               `secretName` Secret, both of which this init container reads. Removing an entry does not uninstall the plugin. Plugins
 #               not listed can still arrive on their own: Hermes installs a
 #               profile's memory provider and features that moved out of core
 #               on first use while `security.allow_lazy_installs` is on.

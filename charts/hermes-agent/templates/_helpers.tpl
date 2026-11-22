@@ -560,6 +560,16 @@ spec:
           mountPath: /seed
           readOnly: true
         {{- end }}
+        # Each profile's Secret, as in the main container: the hermes CLI runs
+        # that profile's secret source, so a GITHUB_TOKEN there reaches its
+        # plugin installs.
+        {{- range $name, $p := .Values.profiles }}
+        {{- if and $p $p.secretName }}
+        - name: profile-{{ $name }}-secrets
+          mountPath: /etc/hermes-secrets/{{ $name }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
     {{- end }}
     {{- with .Values.extraInitContainers }}
     {{- toYaml . | nindent 4 }}
