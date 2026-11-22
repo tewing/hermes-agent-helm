@@ -124,13 +124,28 @@
     "profiles": {
       "type": "object",
       "propertyNames": { "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+      "properties": {
+        "default": {
+          "description": "The root profile: only its secret source is managed here; its config.yaml comes from `config`.",
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "secretName": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
       "additionalProperties": {
         "type": ["object", "null"],
         "additionalProperties": false,
         "properties": {
           "repo": { "type": "string", "minLength": 1 },
           "ref": { "type": "string", "minLength": 1 },
-          "secretName": { "type": "string", "minLength": 1 }
+          "secretName": { "type": "string", "minLength": 1 },
+          "config": {
+            "type": "object",
+            "description": "Partial config.yaml for a profile without `repo` (a distribution owns its own config.yaml).",
+            "additionalProperties": true
+          }
         }
       }
     },

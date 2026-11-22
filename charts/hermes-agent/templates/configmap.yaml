@@ -32,4 +32,11 @@ data:
   SOUL.md: |
     {{- . | nindent 4 }}
   {{- end }}
+  {{- range $name, $p := .Values.profiles }}
+  {{- if and $p $p.config (ne $name "default") (not $p.repo) }}
+  # Partial config.yaml for profile {{ $name }} (profiles.{{ $name }}.config).
+  profile-{{ $name }}.yaml: |
+    {{- toYaml $p.config | nindent 4 }}
+  {{- end }}
+  {{- end }}
 {{- end }}

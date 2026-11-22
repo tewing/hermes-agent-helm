@@ -157,7 +157,12 @@ bootstrap:
 #               on every start (`hermes profile update`: distribution-owned
 #               files such as SOUL.md and skills are replaced; config.yaml and
 #               user data are kept). Change `ref` to upgrade. Public HTTPS git
-#               only. Without `repo`, an empty profile is created.
+#               only.
+#   config      Without `repo`, the profile is created empty on first start
+#               and this partial config.yaml is seeded into it when the profile
+#               is new, or on every start with `bootstrap.overwrite: true` (the
+#               same rule as the root `config`). A distribution owns its own
+#               config.yaml, so `config` and `repo` are mutually exclusive.
 #   secretName  Mount that Secret at /etc/hermes-secrets/<name> and point the
 #               profile's `secrets.command` source at it. Under multiplexing a
 #               profile reads credentials only from its own .env and secret
@@ -174,6 +179,12 @@ profiles: {}
 #    repo: github.com/example/hermes-profile-voice
 #    ref: v0.1.0
 #    secretName: voice-env
+#  researcher:
+#    secretName: researcher-env
+#    config:
+#      model:
+#        provider: openai-api
+#        default: gpt-4o-mini
 #  default:
 #    secretName: agent-env
 

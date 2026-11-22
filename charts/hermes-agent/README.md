@@ -603,7 +603,11 @@ container prepares them before the gateway starts and never blocks startup.
   from that tag or branch, then refresh it from the same ref on every start.
   Distribution-owned files such as `SOUL.md` and skills are replaced;
   `config.yaml`, memories and sessions are kept. Change `ref` to upgrade.
-  Without `repo`, the chart creates an empty profile.
+- **`config`** defines a profile without `repo` entirely in values: the chart
+  creates it empty on first start and seeds this partial `config.yaml` into
+  it when the profile is new, or on every start with `bootstrap.overwrite: true`
+  (the same rule as the root `config`). A distribution owns its own
+  `config.yaml`, so `config` and `repo` cannot be combined.
 - **`secretName`** mounts that Secret at `/etc/hermes-secrets/<name>` and
   points the profile's `secrets.command` source at it. With
   `multiplex_profiles` on, a profile reads credentials only from its own `.env`
