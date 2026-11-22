@@ -615,9 +615,15 @@ container prepares them before the gateway starts and never blocks startup.
   `externalSecret`. The `default` key is the root profile and takes only
   `secretName`.
 
-Plugins are not listed per profile: while `security.allow_lazy_installs` is on
-(the Hermes default), Hermes installs a profile's memory provider and any
-feature that moved out of core the first time that profile starts. See
+- **`plugins`** installs each listed plugin into the profile before the gateway
+  starts (or re-enables it if present): `name`, plus an optional `source`
+  (catalog name, `owner/repo` or Git URL) and `ref` (a 40-character commit
+  SHA; default is the catalog's pin). Private repos need a `GITHUB_TOKEN` in the
+  env Secret. Removing an entry does not uninstall the plugin.
+
+Plugins you don't list can still install themselves: while
+`security.allow_lazy_installs` is on (the Hermes default), Hermes installs a
+profile's memory provider and any feature that moved out of core on first use. See
 [`values-profiles.yaml`](values-profiles.yaml).
 
 ### Remote Config (opt-in)
