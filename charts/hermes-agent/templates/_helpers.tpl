@@ -284,6 +284,42 @@ ExternalSecret, which the chart cannot inspect.
 {{- end }}
 
 {{/*
+Shell script for the `profiles` init container. A distribution is cloned at its
+pinned ref to a fixed path under HERMES_HOME: `hermes profile install` records
+that path as the profile's source, so every later start re-clones the same ref
+there and `hermes profile update` re-reads it (Hermes itself only clones a
+default branch). Steps never fail the container.
+*/}}
+{{- define "hermes-agent.profilesScript" -}}
+cd "$HERMES_HOME"
+mkdir -p "$TMPDIR"
+{{- range $name, $p := .Values.profiles }}
+{{- $p = default (dict) $p }}
+{{- $cli := ternary "hermes" (printf "hermes -p %s" $name) (eq $name "default") }}
+echo "==> profile {{ $name }}"
+{{- if and (ne $name "default") $p.repo }}
+{{- $url := ternary $p.repo (printf "https://%s" $p.repo) (contains "://" $p.repo) }}
+{{- $ref := required (printf "profiles.%s.ref is required with profiles.%s.repo" $name $name) $p.ref }}
+dist="$HERMES_HOME/cache/profile-dist/{{ $name }}"
+rm -rf "$dist"
+if git -c advice.detachedHead=false clone -q --depth 1 --branch {{ $ref | quote }} {{ $url | quote }} "$dist"; then
+  if [ -f "profiles/{{ $name }}/distribution.yaml" ]; then hermes profile update {{ $name }} -y; else hermes profile install "$dist" --name {{ $name }} -y; fi
+else
+  echo "WARN: could not clone {{ $url }} at {{ $ref }}; profile {{ $name }} left as is"
+fi
+{{- else if ne $name "default" }}
+[ -d "profiles/{{ $name }}" ] || hermes profile create {{ $name }} --no-alias
+{{- end }}
+{{- if $p.secretName }}
+{{ $cli }} config set secrets.command.enabled true
+{{ $cli }} config set secrets.command.override_existing true
+{{ $cli }} config set secrets.command.command "cd /etc/hermes-secrets/{{ $name }} && grep -H '' * | sed 's/:/=/'"
+{{- end }}
+{{- end }}
+exit 0
+{{- end }}
+
+{{/*
 Pod template (metadata + spec), shared by the StatefulSet and Deployment
 controllers. Caller is expected to nest this under `template:` with `nindent 4`.
 */}}
@@ -327,7 +363,7 @@ spec:
   {{- end }}
   securityContext:
     {{- toYaml .Values.podSecurityContext | nindent 4 }}
-  {{- if or .Values.bootstrap.enabled .Values.auth.deviceFlow.enabled .Values.extraInitContainers (and .Values.team.enabled .Values.team.sharedVolume.permissions.enabled) }}
+  {{- if or .Values.bootstrap.enabled .Values.auth.deviceFlow.enabled .Values.profiles .Values.extraInitContainers (and .Values.team.enabled .Values.team.sharedVolume.permissions.enabled) }}
   initContainers:
     {{- if .Values.bootstrap.enabled }}
     # Seed chart-managed files into HERMES_HOME (the writable volume). Hermes
@@ -463,6 +499,32 @@ spec:
         - name: team-shared
           mountPath: /team-shared
     {{- end }}
+    {{- if .Values.profiles }}
+    # Install or refresh profile distributions and wire profile secret sources
+    # (see `profiles` in values.yaml). Runs as the runtime user so every file
+    # it writes in HERMES_HOME belongs to the gateway.
+    - name: profiles
+      image: "{{ include "hermes-agent.image" . }}"
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      securityContext:
+        {{- toYaml (mergeOverwrite (deepCopy .Values.securityContext) (dict "runAsUser" (int (include "hermes-agent.migrationUID" .)) "runAsGroup" (int (include "hermes-agent.migrationGID" .)))) | nindent 8 }}
+      command:
+        - sh
+        - -c
+        - |
+          {{- include "hermes-agent.profilesScript" . | nindent 10 }}
+      env:
+        - name: HERMES_HOME
+          value: {{ .Values.persistence.mountPath | quote }}
+        - name: HOME
+          value: {{ printf "%s/home" .Values.persistence.mountPath | quote }}
+        # Scratch space on the data volume: the root filesystem may be read-only.
+        - name: TMPDIR
+          value: {{ printf "%s/cache/profile-tmp" .Values.persistence.mountPath | quote }}
+      volumeMounts:
+        - name: data
+          mountPath: {{ .Values.persistence.mountPath }}
+    {{- end }}
     {{- with .Values.extraInitContainers }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -568,6 +630,13 @@ spec:
           mountPath: {{ .Values.team.sharedVolume.mountPath }}
           readOnly: {{ ne .Values.team.role "leader" }}
         {{- end }}
+        {{- range $name, $p := .Values.profiles }}
+        {{- if and $p $p.secretName }}
+        - name: profile-{{ $name }}-secrets
+          mountPath: /etc/hermes-secrets/{{ $name }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
         {{- with .Values.extraVolumeMounts }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -609,6 +678,16 @@ spec:
     - name: team-shared
       persistentVolumeClaim:
         claimName: {{ include "hermes-agent.team.sharedClaimName" . }}
+    {{- end }}
+    {{- range $name, $p := .Values.profiles }}
+    {{- if and $p $p.secretName }}
+    # optional: a profile whose Secret isn't synced yet still starts (its secret
+    # source reads nothing) instead of blocking the whole Pod.
+    - name: profile-{{ $name }}-secrets
+      secret:
+        secretName: {{ $p.secretName }}
+        optional: true
+    {{- end }}
     {{- end }}
     {{- with .Values.extraVolumes }}
     {{- toYaml . | nindent 4 }}

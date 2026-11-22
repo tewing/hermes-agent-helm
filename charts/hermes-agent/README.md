@@ -593,6 +593,29 @@ existing file by default so you can perform this recovery. With
 `bootstrap.overwrite=true`, the chart replaces it with the values-rendered
 config before migration.
 
+### Profiles
+
+One gateway serves every Hermes profile under `$HERMES_HOME/profiles`. Declare
+extra profiles under `profiles`, keyed by profile name; a `profiles` init
+container prepares them before the gateway starts and never blocks startup.
+
+- **`repo` + `ref`** install a [profile distribution](https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions)
+  from that tag or branch, then refresh it from the same ref on every start.
+  Distribution-owned files such as `SOUL.md` and skills are replaced;
+  `config.yaml`, memories and sessions are kept. Change `ref` to upgrade.
+  Without `repo`, the chart creates an empty profile.
+- **`secretName`** mounts that Secret at `/etc/hermes-secrets/<name>` and
+  points the profile's `secrets.command` source at it. With
+  `multiplex_profiles` on, a profile reads credentials only from its own `.env`
+  and secret sources, never the Pod environment from `env` or
+  `externalSecret`. The `default` key is the root profile and takes only
+  `secretName`.
+
+Plugins are not listed per profile: while `security.allow_lazy_installs` is on
+(the Hermes default), Hermes installs a profile's memory provider and any
+feature that moved out of core the first time that profile starts. See
+[`values-profiles.yaml`](values-profiles.yaml).
+
 ### Remote Config (opt-in)
 
 Starting with Hermes v0.23.0, fleet deployments can read each profile's
@@ -1181,6 +1204,7 @@ comment), or use the SealedSecret + `extraEnvFrom` pattern above.
 | [`values-networkpolicy-dashboard.yaml`](values-networkpolicy-dashboard.yaml) | OpenAI (`openai-api`) | **Dashboard Ingress with NetworkPolicy on**: the inbound rule for port 9119 and the matching trusted proxies, measured on a host-network controller with Calico VXLAN |
 | [`values-hardened.yaml`](values-hardened.yaml) | OpenAI (`openai-api`) | **Pod Security Standards `restricted`**: non-root, read-only rootfs, dropped capabilities - CI-verified in a `restricted`-enforcing namespace |
 | [`values-soul.yaml`](values-soul.yaml) | any | **Persistent identity**: pragmatic engineering style, with runtime edits preserved |
+| [`values-profiles.yaml`](values-profiles.yaml) | any | **Extra profiles**: a profile distribution pinned to a tag, with its own credentials Secret |
 | [`values-multi-agent-collab.yaml`](values-multi-agent-collab.yaml) | any | **Collaborating pair**: two agents handing off by @mention in a shared Discord channel |
 | [`values-team-leader.yaml`](values-team-leader.yaml) + [`values-team-member.yaml`](values-team-member.yaml) | NVIDIA NIM (any works) | **Leader-orchestrated team**: serialized explicit bot @mentions plus a leader-writable/member-read-only RWX knowledge PVC; no file-based task handoff; see [Teams](../../docs/advanced/teams/reference.md) |
 | [`values-shared-knowledge.yaml`](values-shared-knowledge.yaml) | Anthropic (Claude) | **Shared RWX PVC**: multiple agents reading/writing to the same knowledge base |
@@ -1284,6 +1308,7 @@ per example above, each with its `extraEnvFrom`-based secret pattern.
 | probes.liveness | object | Liveness probe spec. Empty = no liveness probe. | `{}` |
 | probes.readiness | object | Readiness probe spec. Empty = no readiness probe. | `{}` |
 | probes.startup | object | Startup probe spec. Empty = no startup probe. Use this when first start takes longer than the liveness probe allows. | `{}` |
+| profiles | object | Extra Hermes profiles, keyed by profile name (see the block comment above    and values-profiles.yaml). | `{}` |
 | readyNotify.enabled | bool | Seed the hook and enable it. Off by default. | `false` |
 | readyNotify.notify | string | Where to post: `discord` (DISCORD_BOT_TOKEN + DISCORD_HOME_CHANNEL) or    `telegram` (TELEGRAM_BOT_TOKEN + TELEGRAM_HOME_CHANNEL). Required when    enabled, unless `auth.deviceFlow.enabled` is true: then empty follows    `auth.deviceFlow.notify`. | `""` |
 | replicaCount | int | Set to 0 to prepare GitOps resources (Secret, ConfigMap, PVC, ...)    without starting an agent Pod, then scale to 1 after credentials and    optional device login are ready. The gateway and device-login init    container do not run while paused. Hermes Agent is a single-writer    workload bound to one HERMES_HOME (ReadWriteOnce PVC), so values above 1    are unsupported: Deployment replicas contend for the same volume and    StatefulSet replicas are disconnected agent identities. | `1` |
@@ -1350,5 +1375,3 @@ per example above, each with its `extraEnvFrom`-based secret pattern.
 | webhook.enabled | bool | Enable Hermes' generic inbound webhook receiver. Native messenger    webhook modes (such as Telegram) are separate listeners configured via env/config. | `false` |
 | webhook.port | int | Webhook receiver port. | `8644` |
 
-----------------------------------------------
-Autogenerated from chart metadata using [helm-docs v1.14.2](https://github.com/norwoodj/helm-docs/releases/v1.14.2)

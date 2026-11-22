@@ -147,6 +147,37 @@ bootstrap:
   overwrite: false
 
 # ---------------------------------------------------------------------------
+# Profiles -> extra Hermes profiles served by this release's one gateway
+# (Hermes multiplexes every profile under HERMES_HOME/profiles). Each key is a
+# profile name; a `profiles` init container prepares them before the gateway
+# starts and never blocks startup (failures are logged and the profile keeps
+# what it had).
+#   repo + ref  Install that profile distribution (`hermes profile install`)
+#               from the tag or branch `ref`, then refresh it from the same ref
+#               on every start (`hermes profile update`: distribution-owned
+#               files such as SOUL.md and skills are replaced; config.yaml and
+#               user data are kept). Change `ref` to upgrade. Public HTTPS git
+#               only. Without `repo`, an empty profile is created.
+#   secretName  Mount that Secret at /etc/hermes-secrets/<name> and point the
+#               profile's `secrets.command` source at it. Under multiplexing a
+#               profile reads credentials only from its own .env and secret
+#               sources, never the Pod env from `env`/`externalSecret`. The
+#               `default` key is the root profile and takes only `secretName`.
+# Plugins are not listed here: while `security.allow_lazy_installs` is on (the
+# Hermes default), Hermes installs a profile's memory provider and features
+# that moved out of core the first time that profile starts.
+# ---------------------------------------------------------------------------
+# -- Extra Hermes profiles, keyed by profile name (see the block comment above
+#    and values-profiles.yaml).
+profiles: {}
+#  voice:
+#    repo: github.com/example/hermes-profile-voice
+#    ref: v0.1.0
+#    secretName: voice-env
+#  default:
+#    secretName: agent-env
+
+# ---------------------------------------------------------------------------
 # Team mode -> one chart release still runs one independent Hermes identity,
 # while several releases share one chat (a Discord thread, or a Telegram group
 # or forum topic) and one RWX knowledge volume. The chart mounts one shared,

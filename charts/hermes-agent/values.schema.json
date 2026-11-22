@@ -121,6 +121,20 @@
       }
     },
 
+    "profiles": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+      "additionalProperties": {
+        "type": ["object", "null"],
+        "additionalProperties": false,
+        "properties": {
+          "repo": { "type": "string", "minLength": 1 },
+          "ref": { "type": "string", "minLength": 1 },
+          "secretName": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
     "team": {
       "type": "object",
       "additionalProperties": false,
