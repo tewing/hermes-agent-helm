@@ -300,6 +300,9 @@ echo "==> profile {{ $name }}"
 {{- if and (ne $name "default") $p.repo }}
 {{- $url := ternary $p.repo (printf "https://%s" $p.repo) (contains "://" $p.repo) }}
 {{- $ref := required (printf "profiles.%s.ref is required with profiles.%s.repo" $name $name) $p.ref }}
+{{- if $p.config }}
+{{- fail (printf "profiles.%s sets both repo and config: the distribution owns its config.yaml, so drop config (or repo)" $name) }}
+{{- end }}
 dist="$HERMES_HOME/cache/profile-dist/{{ $name }}"
 rm -rf "$dist"
 if git -c advice.detachedHead=false clone -q --depth 1 --branch {{ $ref | quote }} {{ $url | quote }} "$dist"; then
@@ -308,7 +311,21 @@ else
   echo "WARN: could not clone {{ $url }} at {{ $ref }}; profile {{ $name }} left as is"
 fi
 {{- else if ne $name "default" }}
-[ -d "profiles/{{ $name }}" ] || hermes profile create {{ $name }} --no-alias
+created=
+[ -d "profiles/{{ $name }}" ] || { hermes profile create {{ $name }} --no-alias && created=1; }
+{{- if $p.config }}
+{{- if not $.Values.bootstrap.enabled }}
+{{- fail (printf "profiles.%s.config is seeded from the chart ConfigMap, which needs bootstrap.enabled=true" $name) }}
+{{- end }}
+# Same rule as the root profile's config.yaml (seed-config): replace it on
+# every start with bootstrap.overwrite=true, else seed it only when the profile
+# is new (`profile create` writes a config.yaml copying the root's model).
+if [ "{{ $.Values.bootstrap.overwrite }}" = "true" ] || [ -n "$created" ] || [ ! -f "profiles/{{ $name }}/config.yaml" ]; then
+  cp /seed/profile-{{ $name }}.yaml "profiles/{{ $name }}/config.yaml" \
+    && HERMES_HOME="$HERMES_HOME/profiles/{{ $name }}" /opt/hermes/.venv/bin/python /seed/migrate-config.py \
+    || echo "WARN: could not seed config.yaml for profile {{ $name }}"
+fi
+{{- end }}
 {{- end }}
 {{- if $p.secretName }}
 {{ $cli }} config set secrets.command.enabled true
@@ -524,6 +541,12 @@ spec:
       volumeMounts:
         - name: data
           mountPath: {{ .Values.persistence.mountPath }}
+        {{- if .Values.bootstrap.enabled }}
+        # profile-<name>.yaml (per-profile `config`) and migrate-config.py.
+        - name: config
+          mountPath: /seed
+          readOnly: true
+        {{- end }}
     {{- end }}
     {{- with .Values.extraInitContainers }}
     {{- toYaml . | nindent 4 }}

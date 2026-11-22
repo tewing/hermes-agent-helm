@@ -1,11 +1,13 @@
 # values-profiles.yaml
 #
-# Example: serve an extra Hermes profile from a profile distribution, with each
-# profile reading its own credentials from its own Secret.
+# Example: serve extra Hermes profiles, one from a profile distribution and one
+# defined entirely in values, each reading its own credentials from its own Secret.
 #
 # One gateway serves every profile under $HERMES_HOME/profiles. The `profiles`
 # init container installs `voice` from the distribution repo at the pinned
 # `ref` and refreshes it from that ref on every start; bump `ref` to upgrade.
+# `researcher` has no repo: it is created empty and its `config` is seeded as
+# its config.yaml when the profile is new (every start with bootstrap.overwrite).
 # With multiplexing on, a profile reads credentials only from its own .env and
 # secret sources, so each profile (the root `default` one included) gets a
 # Secret mounted at /etc/hermes-secrets/<name>. The Secrets are yours to create,
@@ -15,6 +17,8 @@
 #   kubectl -n hermes-agent create secret generic agent-env \
 #     --from-literal=OPENAI_API_KEY='sk-<real>'
 #   kubectl -n hermes-agent create secret generic voice-env \
+#     --from-literal=OPENAI_API_KEY='sk-<real>'
+#   kubectl -n hermes-agent create secret generic researcher-env \
 #     --from-literal=OPENAI_API_KEY='sk-<real>'
 #   helm upgrade --install hermes-agent ./charts/hermes-agent \
 #     --namespace hermes-agent \
@@ -33,3 +37,9 @@ profiles:
     repo: github.com/example/hermes-profile-voice
     ref: v0.1.0
     secretName: voice-env
+  researcher:
+    secretName: researcher-env
+    config:
+      model:
+        provider: openai-api
+        default: gpt-4o-mini
