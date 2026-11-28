@@ -620,6 +620,8 @@ container prepares them before the gateway starts and never blocks startup.
   (catalog name, `owner/repo` or Git URL) and `ref` (a 40-character commit
   SHA; default is the catalog's pin). Private repos need a `GITHUB_TOKEN` in the
   env Secret or in the profile's own `secretName` Secret. Removing an entry does not uninstall the plugin.
+  `profilesInit.extraEnv` adds env to the `profiles` init container only, for
+  example a short-lived `GITHUB_TOKEN` from a Secret the gateway should not see.
 
 Plugins you don't list can still install themselves: while
 `security.allow_lazy_installs` is on (the Hermes default), Hermes installs a

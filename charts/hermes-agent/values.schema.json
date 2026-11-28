@@ -121,6 +121,17 @@
       }
     },
 
+    "profilesInit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "extraEnv": {
+          "description": "Extra env for the profiles init container only.",
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
     "profiles": {
       "type": "object",
       "propertyNames": { "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },

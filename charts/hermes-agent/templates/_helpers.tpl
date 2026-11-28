@@ -547,6 +547,9 @@ spec:
         # Scratch space on the data volume: the root filesystem may be read-only.
         - name: TMPDIR
           value: {{ printf "%s/cache/profile-tmp" .Values.persistence.mountPath | quote }}
+        {{- with .Values.profilesInit.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       # A GITHUB_TOKEN/GH_TOKEN in the env Secret lets plugin installs clone private repos.
       envFrom:
         - secretRef:

@@ -197,6 +197,18 @@ profiles: {}
 #  default:
 #    secretName: agent-env
 
+profilesInit:
+  # -- Extra env for the `profiles` init container only, e.g. a short-lived
+  #    GITHUB_TOKEN for private plugin installs from a Secret that should not
+  #    reach the gateway.
+  extraEnv: []
+  #  - name: GITHUB_TOKEN
+  #    valueFrom:
+  #      secretKeyRef:
+  #        name: github-token
+  #        key: GITHUB_TOKEN
+  #        optional: true
+
 # ---------------------------------------------------------------------------
 # Team mode -> one chart release still runs one independent Hermes identity,
 # while several releases share one chat (a Discord thread, or a Telegram group
